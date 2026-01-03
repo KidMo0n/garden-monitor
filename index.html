@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garden Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #f5f5f5;
+            --bg-card: #ffffff;
+            --bg-data: #fafafa;
+            --border-card: #e0e0e0;
+            --border-data: #e8e8e8;
+            --border-header: #f0f0f0;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-tertiary: #999;
+            --shadow-hover: rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-theme {
+            --bg-primary: #1a1a1a;
+            --bg-card: #2a2a2a;
+            --bg-data: #333333;
+            --border-card: #404040;
+            --border-data: #4a4a4a;
+            --border-header: #3a3a3a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-tertiary: #808080;
+            --shadow-hover: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+        }
+
+        .header {
+            text-align: center;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                margin-bottom: 16px;
+            }
+            
+            .header h1 {
+                font-size: 22px;
+            }
+            
+            .header p {
+                font-size: 11px;
+            }
+        }
+
+        .theme-toggle {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .theme-toggle {
+                right: 12px;
+                padding: 6px 12px;
+                font-size: 16px;
+            }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid var(--border-card);
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--text-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-hover);
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 14px;
+                border-radius: 10px;
+            }
+            
+            .card:hover {
+                transform: none;
+            }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-header);
+        }
+
+        @media (max-width: 768px) {
+            .card-header {
+                margin-bottom: 12px;
+                padding-bottom: 10px;
+            }
+        }
+
+        .garden-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .update-times {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .time-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .time-label {
+            font-size: 9px;
+            color: var(--text-tertiary);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .update-time {
+            font-size: 10px;
+            color: var(--text-tertiary);
+            font-family: 'Courier New', monospace;
+        }
+
+        .source-badge {
+            font-size: 7px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 4px;
+        }
+
+        .source-badge.backup {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        body.dark-theme .source-badge.backup {
+            background: #664d03;
+            color: #ffecb5;
+        }
+
+        .source-badge.primary {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        body.dark-theme .source-badge.primary {
+            background: #0c5460;
+            color: #bee5eb;
+        }
+
+        .source-badge.normal {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        body.dark-theme .source-badge.normal {
+            background: #155724;
+            color: #c3e6cb;
+        }
+
+        @media (max-width: 768px) {
+            .garden-name {
+                font-size: 16px;
+            }
+            
+            .time-label {
+                font-size: 8px;
+            }
+            
+            .update-time {
+                font-size: 9px;
+            }
+        }
+
+        .sensors {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .sensors {
+                gap: 8px;
+            }
+        }
+
+        .sensor-header {
+            display: grid;
+            grid-template-columns: 32px 1fr 1fr;
+            gap: 12px;
+            padding-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .sensor-header {
+                grid-template-columns: 28px 1fr 1fr;
+                gap: 8px;
+            }
+        }
+
+        .sensor-header-label {
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .sensor {
+            display: grid;
+            grid-template-columns: 32px 1fr 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 8px 0;
+            border-top: 1px solid var(--border-header);
+        }
+
+        .sensor:first-of-type {
+            border-top: none;
+        }
+
+        @media (max-width: 768px) {
+            .sensor {
+                grid-template-columns: 28px 1fr 1fr;
+                gap: 8px;
+                padding: 6px 0;
+            }
+        }
+
+        .icon {
+            font-size: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .icon {
+                font-size: 18px;
+            }
+        }
+
+        .data {
+            background: var(--bg-data);
+            border-radius: 6px;
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid var(--border-data);
+        }
+
+        @media (max-width: 768px) {
+            .data {
+                padding: 10px 6px;
+                border-radius: 8px;
+            }
+        }
+
+        .value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .value {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Garden Monitor</h1>
+        <p>Real-time sensor dashboard <span id="connection-status">⚪ Đang tải...</span></p>
+        <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+    </div>
+
+    <div class="grid">
+        <!-- Cards will be generated dynamically by JavaScript -->
+    </div>
+
+    <script>
+        // ==================== DATA CENTER ====================
+        // Dữ liệu tập trung - Firebase sẽ tự động cập nhật
+        let gardenData = {
+            'vuon_b4': {
+                name: 'vuon_b4',
+                indoor: { 
+                    temp: 0, 
+                    humidity: 0, 
+                    light: 0,
+                    updateTime: '',
+                    timestamp: 0
+                },
+                outdoor: { 
+                    temp: 0, 
+                    humidity: 0, 
+                    light: 0,
+                    updateTime: '',
+                    timestamp: 0
+                }
+            },
+            'vuon_b3': {
+                name: 'vuon_b3',
+                indoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 },
+                outdoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 }
+            },
+            'vuon_b2': {
+                name: 'vuon_b2',
+                indoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 },
+                outdoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 }
+            },
+            'vuon_b1': {
+                name: 'vuon_b1',
+                indoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 },
+                outdoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 }
+            },
+            'vuon_a4': {
+                name: 'vuon_a4',
+                indoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 },
+                outdoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 }
+            },
+            'vuon_a3': {
+                name: 'vuon_a3',
+                indoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 },
+                outdoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 }
+            },
+            'vuon_a2': {
+                name: 'vuon_a2',
+                indoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 },
+                outdoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 }
+            },
+            'vuon_a1': {
+                name: 'vuon_a1',
+                indoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 },
+                outdoor: { temp: 0, humidity: 0, light: 0, updateTime: '', timestamp: 0 }
+            }
+        };
+
+        // ==================== RENDER FUNCTIONS ====================
+        function renderDashboard() {
+            const grid = document.querySelector('.grid');
+            grid.innerHTML = '';
+            
+            Object.values(gardenData).forEach(garden => {
+                const card = createGardenCard(garden);
+                grid.appendChild(card);
+            });
+        }
+
+        function createGardenCard(garden) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `card-${garden.name}`;
+            
+            // Format timestamps từ Unix timestamp
+            const formatTime = (ts) => {
+                if (!ts) return '--:--:--';
+                const date = new Date(ts);
+                return date.toLocaleTimeString('vi-VN');
+            };
+            
+            const indoorTime = formatTime(garden.indoor?.timestamp);
+            const outdoorTime = formatTime(garden.outdoor?.timestamp);
+            
+            // Source badges
+            const getSourceBadge = (source) => {
+                if (!source) return '';
+                const isBackup = source === 'simple_sensor_backup';
+                const isLightOnly = source === 'simple_sensor_light_only';
+                
+                if (isBackup) return '<span class="source-badge backup">⚠️ Backup</span>';
+                if (isLightOnly) return '<span class="source-badge primary">ESP+Sensor</span>';
+                return '<span class="source-badge normal">' + source + '</span>';
+            };
+            
+            const indoorSource = getSourceBadge(garden.indoor?.source);
+            const outdoorSource = getSourceBadge(garden.outdoor?.source);
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="garden-name">${garden.name}</div>
+                    <div class="update-times">
+                        <div class="time-row">
+                            <span class="time-label">In:</span>
+                            <span class="update-time">${indoorTime}</span>
+                            ${indoorSource}
+                        </div>
+                        <div class="time-row">
+                            <span class="time-label">Out:</span>
+                            <span class="update-time">${outdoorTime}</span>
+                            ${outdoorSource}
+                        </div>
+                    </div>
+                </div>
+                <div class="sensors">
+                    <div class="sensor-header">
+                        <div></div>
+                        <div class="sensor-header-label">Trong nhà</div>
+                        <div class="sensor-header-label">Ngoài trời</div>
+                    </div>
+                    <div class="sensor">
+                        <div class="icon">🌡️</div>
+                        <div class="data">
+                            <div class="value">${garden.indoor?.temp || 0}°C</div>
+                        </div>
+                        <div class="data">
+                            <div class="value">${garden.outdoor?.temp || 0}°C</div>
+                        </div>
+                    </div>
+                    <div class="sensor">
+                        <div class="icon">💧</div>
+                        <div class="data">
+                            <div class="value">${garden.indoor?.humidity || 0}%</div>
+                        </div>
+                        <div class="data">
+                            <div class="value">${garden.outdoor?.humidity || 0}%</div>
+                        </div>
+                    </div>
+                    <div class="sensor">
+                        <div class="icon">💡</div>
+                        <div class="data">
+                            <div class="value">${garden.indoor?.light || 0}</div>
+                        </div>
+                        <div class="data">
+                            <div class="value">${garden.outdoor?.light || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // ==================== UPDATE FUNCTIONS ====================
+        // Cập nhật dữ liệu cho 1 vườn cụ thể
+        function updateGardenData(gardenName, newData) {
+            if (gardenData[gardenName]) {
+                gardenData[gardenName] = { ...gardenData[gardenName], ...newData };
+                updateGardenCard(gardenName);
+            }
+        }
+
+        // Cập nhật toàn bộ dữ liệu
+        function updateAllData(newData) {
+            gardenData = { ...gardenData, ...newData };
+            renderDashboard();
+        }
+
+        // Cập nhật chỉ 1 card thay vì render lại toàn bộ
+        function updateGardenCard(gardenName) {
+            const card = document.getElementById(`card-${gardenName}`);
+            if (card) {
+                const garden = gardenData[gardenName];
+                
+                // Format timestamp helper
+                const formatTime = (ts) => {
+                    if (!ts) return '--:--:--';
+                    const date = new Date(ts);
+                    return date.toLocaleTimeString('vi-VN');
+                };
+                
+                // Source badge helper
+                const getSourceBadge = (source) => {
+                    if (!source) return '';
+                    const isBackup = source === 'simple_sensor_backup';
+                    const isLightOnly = source === 'simple_sensor_light_only';
+                    
+                    if (isBackup) return '<span class="source-badge backup">⚠️ Backup</span>';
+                    if (isLightOnly) return '<span class="source-badge primary">ESP+Sensor</span>';
+                    return '<span class="source-badge normal">' + source + '</span>';
+                };
+                
+                // Cập nhật timestamps và source badges
+                const timeRows = card.querySelectorAll('.time-row');
+                if (timeRows.length >= 2) {
+                    timeRows[0].innerHTML = `
+                        <span class="time-label">In:</span>
+                        <span class="update-time">${formatTime(garden.indoor?.timestamp)}</span>
+                        ${getSourceBadge(garden.indoor?.source)}
+                    `;
+                    timeRows[1].innerHTML = `
+                        <span class="time-label">Out:</span>
+                        <span class="update-time">${formatTime(garden.outdoor?.timestamp)}</span>
+                        ${getSourceBadge(garden.outdoor?.source)}
+                    `;
+                }
+                
+                // Cập nhật values
+                const values = card.querySelectorAll('.value');
+                if (values.length >= 6) {
+                    values[0].textContent = `${garden.indoor?.temp || 0}°C`;
+                    values[1].textContent = `${garden.outdoor?.temp || 0}°C`;
+                    values[2].textContent = `${garden.indoor?.humidity || 0}%`;
+                    values[3].textContent = `${garden.outdoor?.humidity || 0}%`;
+                    values[4].textContent = garden.indoor?.light || 0;
+                    values[5].textContent = garden.outdoor?.light || 0;
+                }
+            }
+        }
+
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            // FIREBASE REALTIME DATABASE URL
+            // TODO: Thay URL này bằng Firebase URL của bạn
+            FIREBASE_URL: 'https://gardenmonitor-ba6a8-default-rtdb.asia-southeast1.firebasedatabase.app',
+            
+            // Polling interval - 1 giây cho real-time tốt
+            POLL_INTERVAL: 1000,
+            
+            // Auto update
+            AUTO_UPDATE: true
+        };
+
+        // ==================== FIREBASE POLLING ====================
+        
+        async function fetchGardenData() {
+            try {
+                // Thêm timestamp để tránh browser cache
+                const url = CONFIG.FIREBASE_URL + '/gardens.json?_t=' + Date.now();
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data && typeof data === 'object') {
+                    updateAllData(data);
+                    updateConnectionStatus(true);
+                }
+                
+            } catch (error) {
+                console.error('Lỗi khi fetch từ Firebase:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function startPolling() {
+            if (!CONFIG.AUTO_UPDATE) return;
+            
+            console.log('🔥 Starting Firebase polling every', CONFIG.POLL_INTERVAL, 'ms');
+            
+            // Fetch ngay lập tức
+            fetchGardenData();
+            
+            // Sau đó polling định kỳ
+            setInterval(fetchGardenData, CONFIG.POLL_INTERVAL);
+        }
+
+        // ==================== FIREBASE POLLING (SIMPLE & RELIABLE) ====================
+        
+        async function fetchGardenData() {
+            try {
+                // Thêm timestamp để tránh cache
+                const url = CONFIG.FIREBASE_URL + "/gardens.json?_=" + Date.now();
+                
+                const response = await fetch(url, {
+                    method: "GET",
+                    cache: "no-cache",
+                    headers: {
+                        "Cache-Control": "no-cache"
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data && typeof data === "object") {
+                    updateAllData(data);
+                    updateConnectionStatus(true);
+                }
+                
+            } catch (error) {
+                console.error("Firebase error:", error.message);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function startPolling() {
+            if (!CONFIG.AUTO_UPDATE) return;
+            
+            console.log("🔥 Firebase polling started (" + CONFIG.POLL_INTERVAL + "ms)");
+            fetchGardenData();  // Fetch ngay
+            setInterval(fetchGardenData, CONFIG.POLL_INTERVAL);  // Polling định kỳ
+        }
+
+        // Status indicator
+        function updateConnectionStatus(isConnected) {
+            const statusEl = document.getElementById("connection-status");
+            if (statusEl) {
+                statusEl.textContent = isConnected ? "🔥 Real-time" : "🔴 Offline";
+                statusEl.style.color = isConnected ? "var(--text-secondary)" : "#f44336";
+            }
+        }
+
+        // ==================== THEME TOGGLE ====================
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        if (currentTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const theme = document.body.classList.contains('dark-theme') ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+        }
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            renderDashboard();
+            
+            // Start Firebase polling
+            if (CONFIG.AUTO_UPDATE) {
+                startPolling();
+            } else {
+                // Fetch một lần ban đầu
+                fetchGardenData();
+            }
+        });
+
+        // ==================== DEMO: Simulate real-time updates ====================
+        // Uncomment để test cập nhật tự động (mỗi 2 giây random 1 vườn)
+        /*
+        setInterval(() => {
+            const gardens = Object.keys(gardenData);
+            const randomGarden = gardens[Math.floor(Math.random() * gardens.length)];
+            updateGardenData(randomGarden, {
+                updateTime: new Date().toLocaleTimeString('vi-VN'),
+                indoor: {
+                    temp: (18 + Math.random() * 2).toFixed(1),
+                    humidity: (70 + Math.random() * 20).toFixed(1),
+                    light: Math.floor(Math.random() * 100)
+                },
+                outdoor: {
+                    temp: (17 + Math.random() * 2).toFixed(1),
+                    humidity: (75 + Math.random() * 20).toFixed(1),
+                    light: Math.floor(Math.random() * 100)
+                }
+            });
+        }, 2000);
+        */
+    </script>
+</body>
+</html>
