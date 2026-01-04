@@ -152,8 +152,7 @@
 
         .card-header {
             display: flex;
-            justify-content: space-between;
-            align-items: baseline;
+            flex-direction: column;
             margin-bottom: 16px;
             padding-bottom: 12px;
             border-bottom: 2px solid var(--border-header);
@@ -171,32 +170,64 @@
             font-weight: 700;
             color: var(--text-primary);
             line-height: 1.2;
+            text-align: center;
+            margin-bottom: 10px;
         }
 
         .update-times {
             display: flex;
-            flex-direction: column;
-            gap: 2px;
-            align-items: flex-end;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
         }
 
         .time-row {
             display: flex;
             align-items: center;
             gap: 4px;
+            flex: 1;
+        }
+
+        .time-row.indoor {
+            justify-content: flex-start;
+        }
+
+        .time-row.outdoor {
+            justify-content: flex-end;
         }
 
         .time-label {
-            font-size: 9px;
+            font-size: 10px;
             color: var(--text-tertiary);
             font-weight: 600;
             text-transform: uppercase;
+            min-width: 28px;
         }
 
         .update-time {
-            font-size: 10px;
-            color: var(--text-tertiary);
+            font-size: 11px;
+            color: var(--text-secondary);
             font-family: 'Courier New', monospace;
+            font-weight: 500;
+        }
+
+        .update-time.stale {
+            color: #d32f2f;
+            font-weight: 600;
+        }
+
+        body.dark-theme .update-time.stale {
+            color: #ef5350;
+        }
+
+        .stale-icon {
+            color: #d32f2f;
+            font-size: 10px;
+            margin-right: 2px;
+        }
+
+        body.dark-theme .stale-icon {
+            color: #ef5350;
         }
 
         .source-badge {
@@ -244,11 +275,16 @@
             }
             
             .time-label {
-                font-size: 8px;
+                font-size: 9px;
+                min-width: 24px;
             }
             
             .update-time {
-                font-size: 9px;
+                font-size: 10px;
+            }
+            
+            .update-times {
+                gap: 12px;
             }
         }
 
@@ -391,53 +427,6 @@
             color: var(--text-tertiary);
             margin-left: 8px;
         }
-
-        .status-summary {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 20px;
-            padding: 8px 16px;
-            background: var(--bg-card);
-            border-radius: 12px;
-            border: 1px solid var(--border-card);
-            max-width: 500px;
-            margin: 0 auto 20px auto;
-            font-size: 13px;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-secondary);
-        }
-
-        .status-count {
-            font-weight: 700;
-            min-width: 20px;
-            text-align: center;
-        }
-
-        .status-count.normal { color: var(--text-primary); }
-        .status-count.warning { color: #f57c00; }
-        .status-count.danger { color: #d32f2f; }
-
-        body.dark-theme .status-count.warning { color: #ffb74d; }
-        body.dark-theme .status-count.danger { color: #ef5350; }
-
-        @media (max-width: 768px) {
-            .status-summary {
-                gap: 16px;
-                padding: 6px 12px;
-                margin-bottom: 16px;
-                font-size: 12px;
-            }
-            
-            .status-item {
-                gap: 4px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -463,11 +452,14 @@
             // TODO: Thay URL này bằng Firebase URL của bạn
             FIREBASE_URL: 'https://gardenmonitor-ba6a8-default-rtdb.asia-southeast1.firebasedatabase.app/',
             
-            // Polling interval - 2 giây cho real-time tốt
+            // Polling interval - 1 giây cho real-time tốt
             POLL_INTERVAL: 1000,
             
             // Auto update
-            AUTO_UPDATE: true
+            AUTO_UPDATE: true,
+            
+            // Stale data threshold - 1 minute (60 seconds)
+            STALE_THRESHOLD: 60 * 1000
         };
 
         // ==================== SENSOR STATUS FUNCTIONS ====================
@@ -514,6 +506,32 @@
             }
         }
 
+        // ==================== TIME FUNCTIONS ====================
+        
+        function isDataStale(timestamp) {
+            if (!timestamp) return true;
+            const now = Date.now();
+            return (now - timestamp) > CONFIG.STALE_THRESHOLD;
+        }
+
+        function formatTimeWithStaleCheck(timestamp) {
+            if (!timestamp) {
+                return {
+                    time: '--:--:--',
+                    isStale: true
+                };
+            }
+            
+            const date = new Date(timestamp);
+            const time = date.toLocaleTimeString('vi-VN');
+            const isStale = isDataStale(timestamp);
+            
+            return {
+                time: time,
+                isStale: isStale
+            };
+        }
+
         // ==================== RENDER FUNCTIONS ====================
         function renderDashboard() {
             const grid = document.querySelector('.grid');
@@ -534,9 +552,8 @@
                 grid.appendChild(card);
             });
             
-            // Cập nhật số lượng vườn và status summary
+            // Cập nhật số lượng vườn
             updateGardenCount(sortedGardens.length);
-            updateStatusSummary();
         }
 
         function createGardenCard(garden) {
@@ -544,15 +561,9 @@
             card.className = 'card';
             card.id = `card-${garden.name}`;
             
-            // Format timestamps từ Unix timestamp
-            const formatTime = (ts) => {
-                if (!ts) return '--:--:--';
-                const date = new Date(ts);
-                return date.toLocaleTimeString('vi-VN');
-            };
-            
-            const indoorTime = formatTime(garden.indoor?.timestamp);
-            const outdoorTime = formatTime(garden.outdoor?.timestamp);
+            // Format timestamps với stale check
+            const indoorTimeInfo = formatTimeWithStaleCheck(garden.indoor?.timestamp);
+            const outdoorTimeInfo = formatTimeWithStaleCheck(garden.outdoor?.timestamp);
             
             // Source badges
             const getSourceBadge = (source) => {
@@ -584,18 +595,22 @@
             const indoorLightStatus = getLightStatus(indoorLight);
             const outdoorLightStatus = getLightStatus(outdoorLight);
             
+            // Create stale indicators
+            const indoorStaleIcon = indoorTimeInfo.isStale ? '<span class="stale-icon">🚨</span>' : '';
+            const outdoorStaleIcon = outdoorTimeInfo.isStale ? '<span class="stale-icon">🚨</span>' : '';
+            
             card.innerHTML = `
                 <div class="card-header">
                     <div class="garden-name">${garden.name || 'Unknown'}</div>
                     <div class="update-times">
-                        <div class="time-row">
+                        <div class="time-row indoor">
                             <span class="time-label">In:</span>
-                            <span class="update-time">${indoorTime}</span>
+                            ${indoorStaleIcon}<span class="update-time ${indoorTimeInfo.isStale ? 'stale' : ''}">${indoorTimeInfo.time}</span>
                             ${indoorSource}
                         </div>
-                        <div class="time-row">
+                        <div class="time-row outdoor">
                             <span class="time-label">Out:</span>
-                            <span class="update-time">${outdoorTime}</span>
+                            ${outdoorStaleIcon}<span class="update-time ${outdoorTimeInfo.isStale ? 'stale' : ''}">${outdoorTimeInfo.time}</span>
                             ${outdoorSource}
                         </div>
                     </div>
@@ -646,52 +661,6 @@
             }
         }
 
-        function updateStatusSummary() {
-            let normalCount = 0;
-            let warningCount = 0;
-            let dangerCount = 0;
-            
-            Object.values(gardenData).forEach(garden => {
-                if (!garden.indoor && !garden.outdoor) return;
-                
-                // Check all sensors for each garden
-                const sensors = [
-                    // Indoor sensors
-                    garden.indoor?.temp ? getTempStatus(garden.indoor.temp) : null,
-                    garden.indoor?.humidity ? getHumidityStatus(garden.indoor.humidity) : null,
-                    garden.indoor?.light ? getLightStatus(garden.indoor.light) : null,
-                    // Outdoor sensors
-                    garden.outdoor?.temp ? getTempStatus(garden.outdoor.temp) : null,
-                    garden.outdoor?.humidity ? getHumidityStatus(garden.outdoor.humidity) : null,
-                    garden.outdoor?.light ? getLightStatus(garden.outdoor.light) : null,
-                ].filter(status => status !== null);
-                
-                sensors.forEach(status => {
-                    switch(status) {
-                        case 'normal': normalCount++; break;
-                        case 'warning': warningCount++; break;
-                        case 'danger': dangerCount++; break;
-                    }
-                });
-            });
-            
-            // Update UI
-            const normalEl = document.getElementById('normal-count');
-            const warningEl = document.getElementById('warning-count');
-            const dangerEl = document.getElementById('danger-count');
-            const summaryEl = document.getElementById('status-summary');
-            
-            if (normalEl) normalEl.textContent = normalCount;
-            if (warningEl) warningEl.textContent = warningCount;
-            if (dangerEl) dangerEl.textContent = dangerCount;
-            
-            // Show/hide summary bar
-            const totalCount = normalCount + warningCount + dangerCount;
-            if (summaryEl) {
-                summaryEl.style.display = totalCount > 0 ? 'flex' : 'none';
-            }
-        }
-
         // ==================== UPDATE FUNCTIONS ====================
         // Cập nhật dữ liệu cho 1 vườn cụ thể
         function updateGardenData(gardenName, newData) {
@@ -739,13 +708,6 @@
             if (card) {
                 const garden = gardenData[gardenName];
                 
-                // Format timestamp helper
-                const formatTime = (ts) => {
-                    if (!ts) return '--:--:--';
-                    const date = new Date(ts);
-                    return date.toLocaleTimeString('vi-VN');
-                };
-                
                 // Source badge helper
                 const getSourceBadge = (source) => {
                     if (!source) return '';
@@ -753,21 +715,28 @@
                     const isLightOnly = source === 'simple_sensor_light_only';
                     
                     if (isBackup) return '<span class="source-badge backup">⚠️ Backup</span>';
-                    if (isLightOnly) return '<span class="source-badge primary">ESP+Sensor</span>';
+                    if (isLightOnly) return '<span class="source-badge primary">ESP</span>';
                     return '<span class="source-badge normal">' + source + '</span>';
                 };
+                
+                // Format timestamps với stale check
+                const indoorTimeInfo = formatTimeWithStaleCheck(garden.indoor?.timestamp);
+                const outdoorTimeInfo = formatTimeWithStaleCheck(garden.outdoor?.timestamp);
                 
                 // Cập nhật timestamps và source badges
                 const timeRows = card.querySelectorAll('.time-row');
                 if (timeRows.length >= 2) {
+                    const indoorStaleIcon = indoorTimeInfo.isStale ? '<span class="stale-icon">🚨</span>' : '';
+                    const outdoorStaleIcon = outdoorTimeInfo.isStale ? '<span class="stale-icon">🚨</span>' : '';
+                    
                     timeRows[0].innerHTML = `
                         <span class="time-label">In:</span>
-                        <span class="update-time">${formatTime(garden.indoor?.timestamp)}</span>
+                        ${indoorStaleIcon}<span class="update-time ${indoorTimeInfo.isStale ? 'stale' : ''}">${indoorTimeInfo.time}</span>
                         ${getSourceBadge(garden.indoor?.source)}
                     `;
                     timeRows[1].innerHTML = `
                         <span class="time-label">Out:</span>
-                        <span class="update-time">${formatTime(garden.outdoor?.timestamp)}</span>
+                        ${outdoorStaleIcon}<span class="update-time ${outdoorTimeInfo.isStale ? 'stale' : ''}">${outdoorTimeInfo.time}</span>
                         ${getSourceBadge(garden.outdoor?.source)}
                     `;
                 }
@@ -819,9 +788,6 @@
                     values[5].className = `value status-${outdoorLightStatus}`;
                     values[5].title = getStatusText(outdoorLightStatus);
                 }
-                
-                // Cập nhật status summary sau khi update card
-                updateStatusSummary();
             }
         }
 
@@ -906,6 +872,13 @@
                 // Fetch một lần ban đầu
                 fetchGardenData();
             }
+            
+            // Update stale indicators every 30 seconds
+            setInterval(() => {
+                if (isInitialized) {
+                    renderDashboard();
+                }
+            }, 30000);
         });
 
     </script>
